@@ -1,8 +1,11 @@
 package aula20201116;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class JobConsumer extends Thread {
     private JobQueue jobs;
     private Integer assignedJob = null;
+    private AtomicBoolean isRunning = new AtomicBoolean(true);
 
     public JobConsumer(JobQueue jobs) {
         this.jobs = jobs;
@@ -10,10 +13,11 @@ public class JobConsumer extends Thread {
 
     @Override
     public void run() {
-        while (true) {
+        while (isRunning.get()) {
             if (assignedJob == null || assignedJob == 0) {
                 try {
                     assignedJob = jobs.getNextJob();
+                    System.out.println("peguei um");
                     if (assignedJob == null) {
                         System.out.println("Nothing to do... " + System.currentTimeMillis() + " " + this);
                         this.sleep(5000);
@@ -22,19 +26,21 @@ public class JobConsumer extends Thread {
                     e.printStackTrace();
                 }
             } else {
-                int workToDo = assignedJob;
-                for (int i = assignedJob; i >= 0; i--) {
-                    System.out.println("I'm working. Job size " + assignedJob + ", " + i + " left. " + System.currentTimeMillis() + ": " + this);                    
-                    try {
-                        this.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                jobs.assignJob();
+                System.out.println("I'm working. Job size " + assignedJob + ", " + System.currentTimeMillis() + ": " + this);
+                try {
+                    this.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+                jobs.concludeJob();
                 assignedJob = null;
             }
-
         }
+        this.interrupt();
     }
 
+    public void stopConsumer() {
+        isRunning.set(false);
+    }
 }
